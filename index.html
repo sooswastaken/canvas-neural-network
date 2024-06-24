@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>copy of ipad os18 lol</title>
+    <script>
+        function clearCanvas() {
+           fetch('http://localhost:8000/reset', {
+               method: 'GET'
+           })
+        }
+    </script>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <button id="clearButton" onclick="clearCanvas()">🧹Clear</button>
+    <script src="/client.js"></script>
+</body>
+</html>
