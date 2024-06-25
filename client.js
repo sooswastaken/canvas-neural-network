@@ -6,6 +6,7 @@ let mouseIsPressed = false;
 let rect = canvas.getBoundingClientRect();
 
 let currentBoard = [];
+let otherUsersCursors = {};
 
 const ws = new WebSocket('ws://localhost:8000/ws');
 let loaded = false;
@@ -35,7 +36,9 @@ function mousePressed(event) {
 let lastX = -1;
 let lastY = -1;
 
-function beginDrawing(event) {
+lastMousePos = { x: 0, y: 0 };
+
+function mouseMoveHandler(event) {
     if (mouseIsPressed) {
         const newX = Math.floor((event.clientX - rect.left) * (canvas.width / rect.width));
         const newY = Math.floor((event.clientY - rect.top) * (canvas.height / rect.height));
@@ -53,7 +56,17 @@ function beginDrawing(event) {
             lastY = newY;
         }
     }
+
+    // cursor position, send to server if mouse position changes
+    x = event.clientX - rect.left;
+    y = event.clientY - rect.top;
+    if (x !== lastMousePos.x || y !== lastMousePos.y) {
+        ws.send(JSON.stringify({ "type": "cursor-position", "x": x, "y": y }));
+        lastMousePos.x = x;
+        lastMousePos.y = y;
+    }
 }
+
 
 function interpolatePoints(startX, startY, endX, endY) {
     const dx = Math.abs(endX - startX);
@@ -76,6 +89,7 @@ function interpolatePoints(startX, startY, endX, endY) {
     }
 }
 
+
 function stopDrawing(event) {
     mouseIsPressed = false;
     lastX = -1;
@@ -86,13 +100,34 @@ ws.onopen = () => {
     console.log('Connected to server');
 
     canvas.addEventListener('mousedown', mousePressed);
-    canvas.addEventListener('mousemove', beginDrawing);
+    canvas.addEventListener('mousemove', mouseMoveHandler);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
 }
 
 ws.onmessage = (message) => {
     const data = JSON.parse(message.data);
+    if(data.type === "cursor-position") {
+        // add cursor to otherUsersCursors
+        if (data.uuid in otherUsersCursors) {
+            otherUsersCursors[data.uuid].x = data.x;
+            otherUsersCursors[data.uuid].y = data.y;
+        } else {
+            // pick random color
+            color = 'rgb(' + Math.floor(Math.random() * 256) + ',' + Math.floor(Math.random() * 256) + ',' + Math.floor(Math.random() * 256) + ')';
+            otherUsersCursors[data.uuid] = { x: data.x, y: data.y, color: color };
+        }
+
+        console.log(otherUsersCursors);
+
+        return;
+    }
+
+    if(data.type === "client-disconnected") {
+        delete otherUsersCursors[data.uuid];
+        return;
+    }
+
     if (Array.isArray(data)) {
         console.log(data);
         currentBoard = decompress(data);
@@ -125,6 +160,26 @@ function animate() {
             }
         }
     }
+    // draw other users cursors
+    for (let id in otherUsersCursors) {
+        // have a dot and a name above the cursor (which us uuid) (only first 8 charcters)
+        
+        
+        ctx.save();
+
+        ctx.fillStyle = otherUsersCursors[id].color;
+        ctx.beginPath();
+        ctx.arc(otherUsersCursors[id].x, otherUsersCursors[id].y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.fillStyle = 'black';
+        ctx.font = '12px Arial';
+        ctx.fillText(id.slice(0, 8), otherUsersCursors[id].x, otherUsersCursors[id].y - 10);
+        ctx.restore();
+
+
+    }   
+
     requestAnimationFrame(animate);
 }
 

@@ -1,5 +1,6 @@
 from sanic import Sanic, response, Request, Websocket
 from sanic.response import json
+import uuid
 
 import json as json_lib
 
@@ -49,6 +50,8 @@ async def index(request):
 async def ws(request: Request, ws: Websocket):
     global board
     clients.add(ws)
+    # create uuid for each client
+    ws.uuid = str(uuid.uuid4())
     try:
         # Send current board to client when connected
         await ws.send(json_lib.dumps(compress(board)))
@@ -56,6 +59,13 @@ async def ws(request: Request, ws: Websocket):
         while True:
             data = await ws.recv()
             update = json_lib.loads(data)
+            if update.get("type") == "cursor-position":
+                update["uuid"] = ws.uuid
+                for client in clients:
+                    if client != ws:
+                        await client.send(json_lib.dumps(update))
+                continue
+
             if isinstance(update, list):
                 for update_item in update:
                     x, y, value = update_item['x'], update_item['y'], update_item['value']
@@ -70,9 +80,13 @@ async def ws(request: Request, ws: Websocket):
                 # Broadcast the update to all clients except the sender
                 for client in clients:
                     if client != ws:
-                        await client.send(json_lib.dumps([{"x": x, "y": y, "value": value}]))
+                        await client.send(json_lib.dumps({"x": x, "y": y, "value": value})  )
     finally:
         clients.remove(ws)
+
+        # broadcast to all clients that a client has disconnected
+        for client in clients:
+            await client.send(json_lib.dumps({"type": "client-disconnected", "uuid": ws.uuid}))
 
 @app.route("/reset")
 async def reset(request):
