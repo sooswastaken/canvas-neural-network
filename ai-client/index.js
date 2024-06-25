@@ -6,30 +6,7 @@ const apiKey = 'helloworld';
 
 async function detectEqualSign(buffer) {
     try{
-        const formData = new FormData();
-        formData.append('file', buffer, {
-            filename: 'canvas.jpg',
-            contentType: 'image/jpeg'
-        })
-        formData.append('apikey', apiKey);
-        formData.append('language', 'eng');
-        formData.append('isOverlayRequired', 'true');
-        formData.append('OCREngine', '2');
-
-        const response = await fetch(ocrApiUrl, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                ...formData.getHeaders(),
-            },
-        });
-        const jsonResponse = await response.json();
-
-        if(jsonResponse.IsErroredOnProcessing){
-            console.error('Error: ', jsonResponse.ErrorMessage);
-        }else{
-            console.log('OCR Parsed Text: ', jsonResponse.ParsedResults[0].ParsedText);
-        }
+       //send to the neural network
     }catch(e){
         console.error(e);
     }
@@ -50,8 +27,8 @@ function getBuffer(board) {
             }
         }
     }
-    const buffer = canvas.toBuffer('image/png');
-    // fs.writeFileSync('./canvas.png', buffer)
+    const buffer = canvas.toBuffer('image/jpeg');
+    // fs.writeFileSync('./canvas.jpg', buffer)
     return buffer
 
 }

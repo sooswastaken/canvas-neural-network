@@ -43,7 +43,7 @@ function mouseMoveHandler(event) {
         const newX = Math.floor((event.clientX - rect.left) * (canvas.width / rect.width));
         const newY = Math.floor((event.clientY - rect.top) * (canvas.height / rect.height));
         
-        // Ensure newX and newY are within the canvas bounds
+        //bounds
         if (newX >= 0 && newX < 1000 && newY >= 0 && newY < 1000) {
             if (lastX !== -1 && lastY !== -1) {
                 interpolatePoints(lastX, lastY, newX, newY);
@@ -81,7 +81,7 @@ function interpolatePoints(startX, startY, endX, endY) {
         const x = Math.round(startX + i * (endX - startX) / steps);
         const y = Math.round(startY + i * (endY - startY) / steps);
 
-        // Ensure x and y are within the canvas bounds
+        //bounds
         if (x >= 0 && x < 1000 && y >= 0 && y < 1000) {
             ws.send(JSON.stringify({ x: x, y: y, value: 1 }));
             currentBoard[y][x] = 1; // Note: Ensure y comes first for rows, x for columns
@@ -169,8 +169,12 @@ function animate() {
 
         ctx.fillStyle = otherUsersCursors[id].color;
         ctx.beginPath();
-        ctx.arc(otherUsersCursors[id].x, otherUsersCursors[id].y, 5, 0, 2 * Math.PI);
+        //load the image cursor.png
+        const cursor = new Image();
+        cursor.src = './images/cursor.png';
+        ctx.drawImage(cursor, otherUsersCursors[id].x, otherUsersCursors[id].y, 20, 20);
         ctx.fill();
+        
 
         ctx.fillStyle = 'black';
         ctx.font = '12px Arial';
