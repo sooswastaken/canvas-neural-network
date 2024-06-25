@@ -4,6 +4,9 @@ const FormData = require('form-data')
 const ocrApiUrl = 'https://api.ocr.space/parse/image';
 const apiKey = 'helloworld';
 
+const Dann = require('dannjs');
+
+
 async function detectEqualSign(buffer) {
     try{
        //send to the neural network

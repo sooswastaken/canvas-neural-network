@@ -11,6 +11,78 @@ let otherUsersCursors = {};
 const ws = new WebSocket('ws://localhost:8000/ws');
 let loaded = false;
 
+const WIDTH = 1000;
+const HEIGHT = 1000;
+
+const cursor = new Image();
+cursor.src = './images/cursor.png';
+cursor.height = cursor.width * 2; 
+
+let [current_brush_color, current_brush_size] = [1, 3];
+
+
+
+/// attach to the pencil-button and eraser-button
+let pencil_old_size = current_brush_size;
+document.getElementById('pencil-button').addEventListener('click', () => {
+    current_brush_color = 1;
+    changeBrushSize(pencil_old_size);
+});
+
+document.getElementById('eraser-button').addEventListener('click', () => {
+    current_brush_color = 0;
+    pencil_old_size = current_brush_size;
+    changeBrushSize(10);
+});
+
+document.getElementById('brush-size').addEventListener('change', (event) => {
+    current_brush_size = parseInt(event.target.value);
+    pencil_old_size = current_brush_size;
+});
+
+
+function changeBrushSize(size) {
+    current_brush_size = size;
+    document.getElementById('brush-size').value = size;
+}
+
+function draw(x, y) {
+    // create circle with size of current_brush_size in the board, and send list to server
+    // if size is one, just draw a single pixel
+    if (current_brush_size === 1 && isInsideCanvas(x, y)) {
+        currentBoard[y][x] = current_brush_color;
+        ws.send(JSON.stringify({"type":"pixel-update", "x": x, "y": y, "value": current_brush_color}));
+       return;
+    }
+
+
+    let circle = [];
+    for (let i = -current_brush_size; i <= current_brush_size; i++) {
+        for (let j = -current_brush_size; j <= current_brush_size; j++) {
+            if (Math.sqrt(i * i + j * j) <= current_brush_size && isInsideCanvas(x + i, y + j)) {
+                circle.push({"x": x + i, "y": y + j, "value": current_brush_color});
+            }
+        }
+    }
+
+    // update each pixel on the board
+    for (let {x, y} of circle) {
+        if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+            currentBoard[y][x] = current_brush_color;
+        }
+    }
+    
+
+    ws.send(JSON.stringify({"type":"pixels-update", "pixels": circle}));
+}
+
+function drawList(pixels) {
+    for (let {x, y} of pixels) {
+        currentBoard[y][x] = current_brush_color;
+    }
+    ws.send(JSON.stringify({"type":"pixels-update", "pixels": pixels}));
+}
+
 function decompress(compressedBoard) {
     const decompressedBoard = [];
 
@@ -31,41 +103,59 @@ function decompress(compressedBoard) {
 
 function mousePressed(event) {
     mouseIsPressed = true;
+    const coords = getNewCoordinates(event);
+    const [x, y] = [coords.x, coords.y];
+    draw(x, y);
+}
+
+
+function getNewCoordinates(event){
+    return {
+        x: Math.floor((event.clientX - rect.left) * (canvas.width / rect.width)),
+        y: Math.floor((event.clientY - rect.top) * (canvas.height / rect.height))
+    }
+}
+
+function isInsideCanvas(x, y) {
+    return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT;
 }
 
 let lastX = -1;
 let lastY = -1;
 
 lastMousePos = { x: 0, y: 0 };
+let locked = false;
 
 function mouseMoveHandler(event) {
     if (mouseIsPressed) {
-        const newX = Math.floor((event.clientX - rect.left) * (canvas.width / rect.width));
-        const newY = Math.floor((event.clientY - rect.top) * (canvas.height / rect.height));
-        
-        //bounds
-        if (newX >= 0 && newX < 1000 && newY >= 0 && newY < 1000) {
+        const coords = getNewCoordinates(event);
+        const [newX, newY] = [coords.x, coords.y];
+        if (newX >= 0 && newX < WIDTH && newY >= 0 && newY < HEIGHT) {
             if (lastX !== -1 && lastY !== -1) {
                 interpolatePoints(lastX, lastY, newX, newY);
             }
 
-            ws.send(JSON.stringify({ x: newX, y: newY, value: 1 }));
-            currentBoard[newY][newX] = 1; // Note: Ensure y comes first for rows, x for columns
+            draw(newX, newY);
 
             lastX = newX;
             lastY = newY;
         }
     }
 
-    // cursor position, send to server if mouse position changes
+
     x = event.clientX - rect.left;
     y = event.clientY - rect.top;
-    if (x !== lastMousePos.x || y !== lastMousePos.y) {
+    if ((x !== lastMousePos.x || y !== lastMousePos.y) && !locked) {
         ws.send(JSON.stringify({ "type": "cursor-position", "x": x, "y": y }));
         lastMousePos.x = x;
         lastMousePos.y = y;
+    }else if(locked && isInsideCanvas(x, y)){
+        ws.send(JSON.stringify({ "type": "cursor-position", "x": x, "y": y }));
+        locked = false;
     }
 }
+
+
 
 
 function interpolatePoints(startX, startY, endX, endY) {
@@ -77,23 +167,43 @@ function interpolatePoints(startX, startY, endX, endY) {
         return;
     }
 
+    let points = [];
     for (let i = 0; i <= steps; i++) {
         const x = Math.round(startX + i * (endX - startX) / steps);
         const y = Math.round(startY + i * (endY - startY) / steps);
 
-        //bounds
-        if (x >= 0 && x < 1000 && y >= 0 && y < 1000) {
-            ws.send(JSON.stringify({ x: x, y: y, value: 1 }));
-            currentBoard[y][x] = 1; // Note: Ensure y comes first for rows, x for columns
+        if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+            points.push({x: x, y: y, value: current_brush_color});
+           
         }
     }
+
+    // for each point, circle needs to be drawn with size of current_brush_size
+    large_list_of_points = []
+    for (let point of points) {
+        for (let i = -current_brush_size; i <= current_brush_size; i++) {
+            for (let j = -current_brush_size; j <= current_brush_size; j++) {
+                if (Math.sqrt(i * i + j * j) <= current_brush_size && isInsideCanvas(point.x + i, point.y + j)) {
+                    large_list_of_points.push({x: point.x + i, y: point.y + j, value: current_brush_color});
+                }
+            }
+        }
+    }
+    
+    drawList(large_list_of_points);
 }
 
-
-function stopDrawing(event) {
+function stopDrawing(){
     mouseIsPressed = false;
     lastX = -1;
     lastY = -1;
+}
+function stopDrawingLeaveCanvas(event) {
+    mouseIsPressed = false;
+    lastX = -1;
+    lastY = -1;
+    ws.send(JSON.stringify({ "type": "cursor-position", "x": -100, "y": -100 }));
+    locked = true;
 }
 
 ws.onopen = () => {
@@ -102,7 +212,7 @@ ws.onopen = () => {
     canvas.addEventListener('mousedown', mousePressed);
     canvas.addEventListener('mousemove', mouseMoveHandler);
     canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseout', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawingLeaveCanvas);
 }
 
 ws.onmessage = (message) => {
@@ -118,33 +228,37 @@ ws.onmessage = (message) => {
             otherUsersCursors[data.uuid] = { x: data.x, y: data.y, color: color };
         }
 
-        console.log(otherUsersCursors);
-
         return;
     }
-
     if(data.type === "client-disconnected") {
         delete otherUsersCursors[data.uuid];
         return;
     }
+    if (data.type === "render-new-board") {
+        currentBoard = decompress(data.board);
 
-    if (Array.isArray(data)) {
-        console.log(data);
-        currentBoard = decompress(data);
-
-        if (currentBoard.length !== 1000 || currentBoard[0].length !== 1000) {
-            currentBoard = Array.from({ length: 1000 }, () => Array(1000).fill(0));
+        if (currentBoard.length !== WIDTH || currentBoard[0].length !== HEIGHT) {
+            currentBoard = Array.from({ length: WIDTH }, () => Array(HEIGHT).fill(0));
         }
-    } else {
-        if (data.x >= 0 && data.x < 1000 && data.y >= 0 && data.y < 1000) {
+    }
+    if (data.type === "pixel-update") {
+        if (data.x >= 0 && data.x < WIDTH && data.y >= 0 && data.y < HEIGHT) {
             currentBoard[data.y][data.x] = data.value;
         }
     }
+    if (data.type === "pixels-update") {
+        for (let { x, y, value } of data.pixels) {
+            if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+                currentBoard[y][x] = value;
+            }
+        }
+    }
+
 }
 
 function animate() {
-    canvas.width = 1000;
-    canvas.height = 1000;
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
     rect = canvas.getBoundingClientRect();
     if (currentBoard.length !== 0) {
         for (let i = 0; i < currentBoard.length; i++) {
@@ -153,32 +267,29 @@ function animate() {
                     ctx.save();
                     ctx.fillStyle = 'black';
                     ctx.beginPath();
-                    ctx.rect(j, i, 1, 1); 
+                    ctx.arc(j, i, 1, 0, 2*Math.PI); 
                     ctx.fill();
                     ctx.restore();
                 }
             }
         }
     }
-    // draw other users cursors
+
     for (let id in otherUsersCursors) {
-        // have a dot and a name above the cursor (which us uuid) (only first 8 charcters)
-        
-        
         ctx.save();
 
         ctx.fillStyle = otherUsersCursors[id].color;
         ctx.beginPath();
-        //load the image cursor.png
-        const cursor = new Image();
-        cursor.src = './images/cursor.png';
-        ctx.drawImage(cursor, otherUsersCursors[id].x, otherUsersCursors[id].y, 20, 20);
+
+
+
+        ctx.drawImage(cursor, otherUsersCursors[id].x, otherUsersCursors[id].y, 15, 20);
         ctx.fill();
         
 
         ctx.fillStyle = 'black';
         ctx.font = '12px Arial';
-        ctx.fillText(id.slice(0, 8), otherUsersCursors[id].x, otherUsersCursors[id].y - 10);
+        ctx.fillText(id.slice(0, 8), otherUsersCursors[id].x-10, otherUsersCursors[id].y + 35);
         ctx.restore();
 
 

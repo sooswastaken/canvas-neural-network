@@ -3,8 +3,10 @@ from sanic.response import json
 import uuid
 
 import json as json_lib
+from sanic_cors import CORS
 
 app = Sanic(__name__)
+CORS(app)
 
 BOARD_WIDTH = 1000
 BOARD_HEIGHT = 1000
@@ -54,7 +56,7 @@ async def ws(request: Request, ws: Websocket):
     ws.uuid = str(uuid.uuid4())
     try:
         # Send current board to client when connected
-        await ws.send(json_lib.dumps(compress(board)))
+        await ws.send(json_lib.dumps({"type":"render-new-board", "board": compress(board)}))
 
         while True:
             data = await ws.recv()
@@ -66,21 +68,21 @@ async def ws(request: Request, ws: Websocket):
                         await client.send(json_lib.dumps(update))
                 continue
 
-            if isinstance(update, list):
-                for update_item in update:
+            if update.get("type") == "pixels-update":
+                for update_item in update["pixels"]:
                     x, y, value = update_item['x'], update_item['y'], update_item['value']
                     board[y][x] = value
                 # Broadcast the entire update to all clients except the sender
                 for client in clients:
                     if client != ws:
                         await client.send(json_lib.dumps(update))
-            else:
+            if update.get("type") == "pixel-update":
                 x, y, value = update['x'], update['y'], update['value']
                 board[y][x] = value
                 # Broadcast the update to all clients except the sender
                 for client in clients:
                     if client != ws:
-                        await client.send(json_lib.dumps({"x": x, "y": y, "value": value})  )
+                        await client.send(json_lib.dumps(update))
     finally:
         clients.remove(ws)
 
@@ -93,7 +95,7 @@ async def reset(request):
     global board
     board = [[0 for _ in range(BOARD_WIDTH)] for _ in range(BOARD_HEIGHT)]
     for client in clients:
-        await client.send(json_lib.dumps(compress(board)))
+        await client.send(json_lib.dumps({"type": "render-new-board", "board": compress(board)}))
     return response.text("Board reset")
 
 @app.route("/get-board")
