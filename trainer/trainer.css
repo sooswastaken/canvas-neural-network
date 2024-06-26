@@ -61,8 +61,6 @@ button{
 
 button:hover{
     opacity: 0.8;
-    padding: 13px 20px;
-    margin: 5px 0;
     background-color: #50c15a;
 }
 

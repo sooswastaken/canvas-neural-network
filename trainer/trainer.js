@@ -11,19 +11,120 @@ let lastMousePos = { x: 0, y: 0 };
 let lastX = lastY = -1;
 let locked = false;
 let bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
-
+let smallBoard = new Array(40).fill(0).map(() => new Array(28).fill(0));
 
 document.getElementById('clear').addEventListener('click', () => {
     bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
 });
 
 
-let brain = new Dann(40*28, 10);
-brain.addHiddenLayer(64, 'leakyReLU');
-brain.addHiddenLayer(64, 'leakyReLU');
-brain.setOutputActivation('sigmoid');
-brain.setLossFunction('mce');
+let brain = new Dann(1120, 10);
+brain.addHiddenLayer(64, 'sigmoid');
+brain.addHiddenLayer(64, 'sigmoid');
+brain.outputActivation('sigmoid');
+brain.setLossFunction('bce');
 brain.makeWeights();
+
+function get1Dboard(board){
+    let oneDimensionalBoard = [];
+    let lockedSmallBoard = compress2DArray(bigBoard);
+    for(let i = 0; i < board.length; i++){
+        for(let j = 0; j < board[i].length; j++){
+            oneDimensionalBoard.push(lockedSmallBoard[i][j]);
+        }
+    }
+    return oneDimensionalBoard
+}
+document.getElementById('prediction').addEventListener('click', () => {
+    let oneDimensionalBoard = get1Dboard(smallBoard);
+
+    console.log(oneDimensionalBoard.length)
+
+    const prediction = brain.feedForward(oneDimensionalBoard);
+    const maxNumber = Math.max(...prediction);
+    let finalNumber;
+    for(let i = 0; i < prediction.length; i++){
+        if(prediction[i] == maxNumber){
+            finalNumber = i;
+            break;
+        }
+    }
+
+    document.getElementById('ai-guess').innerHTML = "Guess: " + finalNumber;
+    document.getElementById('ai-confidence').innerHTML = "Confidence: " + maxNumber.toFixed(4); // Display confidence with 4 decimal places
+});
+
+const correct = document.querySelectorAll('.correct');
+correct.forEach((button) => {
+    button.addEventListener('click', correctOption)
+})
+
+
+let batch = []
+
+//batch.push(get1Dboard(smallBoard), correctArray);
+document.addEventListener('keypress', (e) => {
+    
+    switch(e.key){
+        case '0':
+            correctOption(0);
+            break;
+        case '1':
+            correctOption(1);
+            break;
+        case '2':
+            correctOption(2);
+            break;
+        case '3':
+            correctOption(3);
+            break;
+        case '4':
+            correctOption(4);
+            break;
+        case '5':
+            correctOption(5);
+            break;
+        case '6':
+            correctOption(6);
+            break;
+        case '7':
+            correctOption(7);
+            break;
+        case '8':
+            correctOption(8);
+            break;
+        case '9':
+            correctOption(9);
+            break;
+        case 's':
+            saveNetwork(brain, 'network.json');
+            break;
+        case 'l':
+            learn()
+    }
+        
+})
+
+function learn(){
+    setTimeout(() => {
+        for(let i = 0; i < 1000; i++){
+            for(let j = 0; j < batch.length; j++){
+                brain.backpropagate(batch[j][0], batch[j][1]);
+            }
+        }
+    },10)
+
+    bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
+}
+
+function correctOption(key){
+    let correctArray = [0,0,0,0,0,0,0,0,0,0];
+    correctArray[key] = 1;
+
+    batch.push([get1Dboard(smallBoard), correctArray])
+    bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0))
+}
+
 
 function compress2DArray(arr){
     //we need to compress to a size of 168x240
@@ -198,21 +299,21 @@ function stopDrawingLeaveCanvas(event) {
 
 function animate(){
     [scanvas.width, scanvas.height, bcanvas.width, bcanvas.height] = [28, 40, 28*6, 40*6];
+    bctx.fillStyle = 'black';
+    sctx.fillStyle = 'black';
 
     for (let i = 0; i < bigBoard.length; i++){
         for (let j = 0; j < bigBoard[0].length; j++){
             if (bigBoard[i][j] == 1){
-                bctx.fillStyle = 'black';
                 bctx.fillRect(j, i, 1, 1);
             }
         }
     }
 
-    const compressed = compress2DArray(bigBoard);
-    for (let i = 0; i < compressed.length; i++){
-        for (let j = 0; j < compressed[0].length; j++){
-            if (compressed[i][j] > 0){
-                sctx.fillStyle = 'black';
+    smallBoard = compress2DArray(bigBoard);
+    for (let i = 0; i < smallBoard.length; i++){
+        for (let j = 0; j < smallBoard[0].length; j++){
+            if (smallBoard[i][j] > 0){
                 sctx.fillRect(j, i, 1, 1);
             }
         }
