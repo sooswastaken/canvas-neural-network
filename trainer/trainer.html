@@ -9,7 +9,18 @@
 <body>
     <!-- settings sidebar, train button, buttons to select correct digit-->
     <div id="settings">
-        <button id="train">Train</button>
+        <button id="saveai">SAVE CURRENT NETWORK</button>
+        <button id="clear">Clear board</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/gh/matiasvlevi/dann@latest/build/dann.min.js"></script> 
+
+    <canvas id="trainer-big"></canvas>
+    <canvas id="trainer-small"></canvas>
+    <div id="ai-output">
+        <button id="prediction">Predict Number</button>
+        <h2 id="ai-guess">Guess: </h2>
+        <h2 id="ai-confidence">Confidence: </h2>
+        <h5>Click on the correct answer</h2>
         <button id="0">0</button>
         <button id="1">1</button>
         <button id="2">2</button>
@@ -21,9 +32,6 @@
         <button id="8">8</button>
         <button id="9">9</button>
     </div>
-
-    <canvas id="trainer-big"></canvas>
-    <canvas id="trainer-small"></canvas>
     <script src="trainer.js"></script>
 </body>
 </html>

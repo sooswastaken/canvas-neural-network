@@ -105,6 +105,9 @@ function mousePressed(event) {
     mouseIsPressed = true;
     const coords = getNewCoordinates(event);
     const [x, y] = [coords.x, coords.y];
+
+    lastX = x;
+    lastY = y;
     draw(x, y);
 }
 
@@ -277,22 +280,14 @@ function animate() {
 
     for (let id in otherUsersCursors) {
         ctx.save();
-
         ctx.fillStyle = otherUsersCursors[id].color;
         ctx.beginPath();
-
-
-
         ctx.drawImage(cursor, otherUsersCursors[id].x, otherUsersCursors[id].y, 15, 20);
         ctx.fill();
-        
-
         ctx.fillStyle = 'black';
         ctx.font = '12px Arial';
         ctx.fillText(id.slice(0, 8), otherUsersCursors[id].x-10, otherUsersCursors[id].y + 35);
         ctx.restore();
-
-
     }   
 
     requestAnimationFrame(animate);
