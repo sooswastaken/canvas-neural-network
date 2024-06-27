@@ -259,6 +259,76 @@ ws.onmessage = (message) => {
 
 }
 
+function findEquationsBounds(board) {
+    const visited = board.map(row => row.map(() => false));
+    let components = [];
+
+    function isValid(x, y) {
+        return x >= 0 && x < board.length && y >= 0 && y < board[0].length;
+    }
+
+    function dfs(x, y) {
+        if (!isValid(x, y) || visited[x][y] || board[x][y] === 0) return null;
+        
+        visited[x][y] = true;
+        let bounds = { top: x, bottom: x, left: y, right: y };
+
+        let stack = [[x, y]];
+        while (stack.length > 0) {
+            let [cx, cy] = stack.pop();
+
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    let nx = cx + dx, ny = cy + dy;
+                    if (isValid(nx, ny) && !visited[nx][ny] && board[nx][ny] === 1) {
+                        visited[nx][ny] = true;
+                        bounds.top = Math.min(bounds.top, nx);
+                        bounds.bottom = Math.max(bounds.bottom, nx);
+                        bounds.left = Math.min(bounds.left, ny);
+                        bounds.right = Math.max(bounds.right, ny);
+                        stack.push([nx, ny]);
+                    }
+                }
+            }
+        }
+
+        return bounds;
+    }
+
+    for (let i = 0; i < board.length; i++) {
+        for (let j = 0; j < board[i].length; j++) {
+            if (board[i][j] === 1 && !visited[i][j]) {
+                let component = dfs(i, j);
+                if (component) {
+                    components.push(component);
+                }
+            }
+        }
+    }
+
+    let equations = [];
+    components.sort((a, b) => a.left - b.left); 
+    for (let component of components) {
+        let added = false;
+        for (let equation of equations) {
+            if (component.left - equation.bounds.right <= 100) {
+                equation.bounds.right = Math.max(equation.bounds.right, component.right);
+                equation.bounds.top = Math.min(equation.bounds.top, component.top);
+                equation.bounds.bottom = Math.max(equation.bounds.bottom, component.bottom);
+                equation.values.push(component);
+                added = true;
+                break;
+            }
+        }
+        if (!added) {
+            equations.push({ values: [component], bounds: {...component} });
+        }
+    }
+
+    return equations;
+}
+
+
 function animate() {
     canvas.width = WIDTH;
     canvas.height = HEIGHT;
@@ -268,7 +338,7 @@ function animate() {
             for (let j = 0; j < currentBoard[i].length; j++) {
                 if (currentBoard[i][j] == 1) {
                     ctx.save();
-                    ctx.fillStyle = 'black';
+                    ctx.fillStyle = 'white';
                     ctx.beginPath();
                     ctx.arc(j, i, 1, 0, 2*Math.PI); 
                     ctx.fill();

@@ -15,15 +15,48 @@ let smallBoard = new Array(40).fill(0).map(() => new Array(28).fill(0));
 
 document.getElementById('clear').addEventListener('click', () => {
     bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
+    document.getElementById('ai-guess').innerHTML = "Guess: ";
+    document.getElementById('ai-confidence').innerHTML = "Confidence: ";
 });
 
 
-let brain = new Dann(1120, 10);
-brain.addHiddenLayer(64, 'sigmoid');
-brain.addHiddenLayer(64, 'sigmoid');
-brain.outputActivation('sigmoid');
-brain.setLossFunction('bce');
-brain.makeWeights();
+let network = null
+let brain = null
+
+let json = null;
+fetch('./network.json')
+    .then(response => response.json())
+    .then(data => {
+        brain = new Dann();
+        brain.fromJSON(data);
+        brain.setLossFunction('bce');
+        console.log(brain)
+    })
+    .catch(err => {
+        brain = new Dann(1120, 10);
+        brain.addHiddenLayer(64, 'sigmoid');
+        brain.addHiddenLayer(64, 'sigmoid');
+        brain.outputActivation('sigmoid');
+        brain.setLossFunction('bce');
+
+        brain.makeWeights();
+        console.log(err)
+    // }
+    });
+
+if(json == null){
+    //check localstorage
+    //let network = localStorage.getItem('network');
+    // if(network != null){
+    //     brain = new Dann();
+    //     brain.fromJSON(JSON.parse(network));
+    // }else{
+        
+}else{
+
+}
+
+
 
 function get1Dboard(board){
     let oneDimensionalBoard = [];
@@ -51,20 +84,33 @@ document.getElementById('prediction').addEventListener('click', () => {
     }
 
     document.getElementById('ai-guess').innerHTML = "Guess: " + finalNumber;
-    document.getElementById('ai-confidence').innerHTML = "Confidence: " + maxNumber.toFixed(4); // Display confidence with 4 decimal places
+    document.getElementById('ai-confidence').innerHTML = "Confidence: " + maxNumber.toFixed(4);
+
 });
 
 const correct = document.querySelectorAll('.correct');
+
 correct.forEach((button) => {
     button.addEventListener('click', correctOption)
 })
+
+document.getElementById('saveai').addEventListener('click', () => {
+    saveNetwork(brain, 'network.json');
+});
+document.getElementById('clearbatch').addEventListener('click', () => {
+    batch = [];
+});
 
 
 let batch = []
 
 //batch.push(get1Dboard(smallBoard), correctArray);
 document.addEventListener('keypress', (e) => {
-    
+    //if the small canvas is empty, do not proceed
+    if(smallBoard.every(row => row.every(pixel => pixel == 0)) && e.key != 'l' && e.key != 's'){
+        console.log('oops empty')
+        return;
+    }
     switch(e.key){
         case '0':
             correctOption(0);
@@ -100,10 +146,36 @@ document.addEventListener('keypress', (e) => {
             saveNetwork(brain, 'network.json');
             break;
         case 'l':
-            learn()
+            learn();
+            break;
+        case 'c':
+            document.getElementById('clear').click();
+            break;
+        case 'p':
+            document.getElementById('prediction').click();
+            break;
     }
         
 })
+
+bcanvas.onmouseup = function(){
+    document.getElementById('prediction').click();
+}
+
+function saveNetwork(network, filename){
+    const data = network.toJSON();
+    const json = JSON.stringify(data);
+
+    //save to ./filename.json in this repository
+    const blob = new Blob([json], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 
 function learn(){
     setTimeout(() => {
@@ -115,11 +187,15 @@ function learn(){
     },10)
 
     bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
+
+    localStorage.setItem('network', JSON.stringify(brain.toJSON()));
 }
 
 function correctOption(key){
     let correctArray = [0,0,0,0,0,0,0,0,0,0];
     correctArray[key] = 1;
+
+    console.log(correctArray)
 
     batch.push([get1Dboard(smallBoard), correctArray])
     bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0))

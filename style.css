@@ -5,6 +5,7 @@ body,
             height: 100%;
             overflow: hidden;
             display: flex;
+            background-color: #3f3f3f;
             /* Added to align sidebar and canvas container */
         }
 
@@ -12,7 +13,7 @@ body,
         #sidebar {
             width: 100px;
             height: 100%;
-            background-color: #ffffff;
+            background-color: #f0f0f0;
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
             display: flex;
             flex-direction: column;
@@ -21,7 +22,7 @@ body,
         }
 
         input[type="range"] {
-            -webkit-appearance: slider-vertical; /* Needed for WebKit browsers */
+            /* -webkit-appearance: slider-vertical;  */
             width: 80px; /* Adjust width for better control */
             height: 150px; /* Set a fixed height */
             margin: 20px auto; /* Center the slider horizontally */
@@ -44,12 +45,12 @@ body,
             /* Center canvas horizontally */
             align-items: center;
             /* Center canvas vertically */
-            background-color: #f9f9f9;
+            background-color: #000000;
             /* Slight background color */
         }
 
         #canvas {
-            border: 1px solid #cccccc;
+            border: 1px solid #000000;
         }
 
         button {
