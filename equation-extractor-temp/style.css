@@ -58,16 +58,28 @@ label {
     justify-content: center;
     align-items: center;
     background-color: #f9f9f9;
+
 }
 
 #canvas {
     border: 1px solid #cccccc;
+
 }
+
+#canvasContainer{
+    flex-direction: column;
+    overflow: auto;
+    padding: 20px;
+}
+
 #canvasContainer canvas {
     border: 4px solid #000000;
-
-    transform: scale(.1);
+    transform: scale(0.1);
+    transform-origin: 0 0;
+    display: block;
+    margin: 0;
 }
+
 
 button {
     margin-bottom: 20px;

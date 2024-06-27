@@ -59,7 +59,7 @@ function findEquationsBounds(board) {
 
     function dfs(x, y) {
         if (!isValid(x, y) || visited[x][y] || board[x][y] === 0) return null;
-        
+
         visited[x][y] = true;
         let bounds = { top: x, bottom: x, left: y, right: y };
 
@@ -98,9 +98,9 @@ function findEquationsBounds(board) {
 
     // Group components into equations based on horizontal distance
     let equations = [];
-    components.sort((a, b) => a.left - b.left);  // Sort components by left bound
+    let c = components.sort((a, b) => a.left - b.left);  // Sort components by left bound
 
-    for (let component of components) {
+    for (let component of c) {
         let added = false;
         for (let equation of equations) {
             // Check if current component is within 100px horizontally from the equation
@@ -139,6 +139,7 @@ function showEquations(equations, board) {
         const ctx = canvas.getContext('2d');
         ctx.scale(10, 10);  // Scale up the drawing
 
+        canvas.style.border = 'solid #0000FF';
         // Draw each number and its bounding box
         eq.values.forEach(num => {
             const numWidth = num.right - num.left + 1;
@@ -155,7 +156,7 @@ function showEquations(equations, board) {
 
             // Draw bounding box around the number
             ctx.strokeStyle = 'red';
-            ctx.lineWidth = 0.1;
+            ctx.lineWidth = 1;
             ctx.strokeRect(num.left - eq.bounds.left, num.top - eq.bounds.top, numWidth, numHeight);
         });
 
