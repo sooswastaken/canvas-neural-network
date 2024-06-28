@@ -318,23 +318,102 @@ async function learn(){
     //indicator
     document.getElementById('ai-guess').innerHTML = "Training...";
 
+    let bestLoss = 100;
+    let bestAcc = 0;
+    let patience = 20;
+    let firstEpochAcc = 0;
+    let previousEpoch = {loss: 100, acc: 0}
+    let bestBrain;
     //train with da batch
     await brain.fit(xs, ys, {
-        epochs: 100,
+        epochs: 1000,
         batchSize: 32,
         callbacks: {
-            onEpochEnd: (epoch, logs) => {
+            onEpochEnd: async (epoch, logs) => {
                 console.log(`Epoch ${epoch + 1}: loss = ${logs.loss}, accuracy = ${logs.acc}`);
+                //get best brain across 500 epochs 
+                if (logs.loss < bestLoss) {
+                    bestLoss = logs.loss;
+                    // patience = 20;
+
+                    if(logs.acc > bestAcc){
+                        bestAcc = logs.acc;
+                        bestBrain = {brain: brain, loss: logs.loss, acc: logs.acc, epoch: epoch+1};
+                        if(logs.acc === 1){
+                            //found most accurate network
+                            brain.stopTraining = true;
+                        }
+                    }
+                } //else {
+                //     patience--;
+                // }
+                // if (logs.acc === 1 || patience === 0) {
+                //   
+                //     if (logs.acc <= firstEpochAcc && firstEpochAcc != 1){
+                //         patience = 20;
+                //     }else{
+                //   
+                //         if (logs.loss <= previousEpoch.loss && logs.acc >= previousEpoch.acc){
+                //             brain.stopTraining = true;
+                //         }else{
+                //             patience = 2;
+                //         }
+                //     }
+                // }
+
+                previousEpoch = {loss: logs.loss, acc: logs.acc}
+
             }
         }
+
+
     });
+    //load the best brain
+    if(bestBrain.brain != undefined){
+        brain = await cloneModel(bestBrain.brain)
+        console.log("got the brain from epoch " + bestBrain.epoch + ", accuracy = " + bestBrain.acc)
+    }
+
+    
 
     document.getElementById('ai-guess').innerHTML = "Training is complete";
     bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
     batch = [];
 }
 
+async function cloneModel(originalModel) {
+    const saveHandler = {
+        async save(modelArtifacts) {
+            return {
+                modelArtifactsInfo: {
+                    dateSaved: new Date(),
+                    modelTopologyType: 'JSON',
+                    modelTopologyBytes: modelArtifacts.modelTopology ?
+                        new Blob([JSON.stringify(modelArtifacts.modelTopology)]).size :
+                        0,
+                    weightSpecsBytes: modelArtifacts.weightSpecs ?
+                        new Blob([JSON.stringify(modelArtifacts.weightSpecs)]).size :
+                        0,
+                    weightDataBytes: modelArtifacts.weightData ?
+                        modelArtifacts.weightData.byteLength :
+                        0,
+                },
+                modelArtifacts,
+            };
+        }
+    };
+    const savedModel = await originalModel.save(saveHandler);
 
+    const clonedModel = await tf.loadLayersModel(tf.io.fromMemory(savedModel.modelArtifacts));
+
+    clonedModel.compile({
+        optimizer: originalModel.optimizer, 
+        loss: originalModel.loss, 
+        metrics: originalModel.metrics
+    });
+
+    return clonedModel;
+}
 
 function correctOption(key){
 
