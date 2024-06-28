@@ -37,22 +37,16 @@ function setupBrain(){
         metrics: ['accuracy']
     });
 }
-//try to get network.json
-fetch('./network.json')
-    .then(response => response.json())
-    .then(async data => {
-        brain = await tf.loadLayersModel("./network.json");
-        console.log(brain)
-        await brain.compile({
-            optimizer: tf.train.adam(),
-            loss: 'categoricalCrossentropy',
-            metrics: ['accuracy']
-        });
-    })
-    .catch(err => {
-        console.log(err)
-        setupBrain();
+
+(async () => {
+    brain = await tf.loadLayersModel('./network.json');
+    await brain.compile({
+        optimizer: tf.train.adam(),
+        loss: 'categoricalCrossentropy',
+        metrics: ['accuracy']
     });
+    
+})()
 
 // brain = new Dann(1120, 10);
 // brain.addHiddenLayer(128, 'sigmoid');
@@ -231,7 +225,7 @@ document.addEventListener('keypress', (e) => {
             document.getElementById('prediction').click();
             break;
         case 'm':
-            console.log('done! if this was a missclick then fuck you you suck and you restarted the neural network')
+            console.log('done!')
             setupBrain();
             break;
     }

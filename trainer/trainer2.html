@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="trainer.css">
+    <title>TRAIN AI!</title>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+    <!-- settings sidebar, train button, buttons to select correct digit-->
+    <div id="settings">
+        <button id="saveai">SAVE CURRENT NETWORK</button>
+        <button id="clear">Clear board</button>
+        <button id="clearbatch">Clear batch</button>
+    </div>
+
+    
+
+    <canvas id="trainer-big"></canvas>
+    <canvas id="trainer-small"></canvas>
+    <div id="ai-output">
+        <button id="prediction">Predict Number</button>
+        <h2 id="ai-guess">Guess: </h2>
+        <h2 id="ai-confidence">Confidence: </h2>
+    </div>
+    <script src="trainer2.js"></script>
+</body>
+</html>

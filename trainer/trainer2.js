@@ -10,11 +10,11 @@ let mouseIsPressed = false;
 let lastMousePos = { x: 0, y: 0 };
 let lastX = lastY = -1;
 let locked = false;
-let bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
-let smallBoard = new Array(40).fill(0).map(() => new Array(28).fill(0));
+let bigBoard = new Array(28*6).fill(0).map(() => new Array(28*6).fill(0));
+let smallBoard = new Array(28).fill(0).map(() => new Array(28).fill(0));
 
 document.getElementById('clear').addEventListener('click', () => {
-    bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
+    bigBoard = new Array(28*6).fill(0).map(() => new Array(28*6).fill(0));
     document.getElementById('ai-guess').innerHTML = "Guess: ";
     document.getElementById('ai-confidence').innerHTML = "Confidence: ";
 });
@@ -25,7 +25,7 @@ let brain = null
 
 function setupBrain(){
     brain = tf.sequential();
-    brain.add(tf.layers.dense({ units: 256, activation: 'relu', inputShape: [1120] }));
+    brain.add(tf.layers.dense({ units: 256, activation: 'relu', inputShape: [784] }));
     brain.add(tf.layers.dropout({ rate: 0.2 }));
     brain.add(tf.layers.dense({ units: 128, activation: 'relu' }));
     brain.add(tf.layers.dropout({ rate: 0.2 }));
@@ -38,11 +38,10 @@ function setupBrain(){
     });
 }
 //try to get network.json
-fetch('./network.json')
+fetch('./network 2.json')
     .then(response => response.json())
     .then(async data => {
-        brain = await tf.loadLayersModel("./network.json");
-        console.log(brain)
+        brain = await tf.loadLayersModel('./network 2.json');
         await brain.compile({
             optimizer: tf.train.adam(),
             loss: 'categoricalCrossentropy',
@@ -50,29 +49,8 @@ fetch('./network.json')
         });
     })
     .catch(err => {
-        console.log(err)
         setupBrain();
     });
-
-// brain = new Dann(1120, 10);
-// brain.addHiddenLayer(128, 'sigmoid');
-// brain.addHiddenLayer(100, 'sigmoid');
-// brain.addHiddenLayer(64, 'sigmoid');
-// brain.outputActivation('sigmoid');
-// brain.setLossFunction('mce');
-
-// brain.makeWeights();
-// fetch('./network.json')
-//     .then(response => response.json())
-//     .then(data => {
-//         brain = Dann.createFromJSON(data);
-//         brain.setLossFunction('bce')
-//     })
-//     .catch(err => {
-
-//     // }
-//     });
-
 
 
 function get1Dboard(board){
@@ -86,37 +64,50 @@ function get1Dboard(board){
 document.getElementById('prediction').addEventListener('click', async() => {
     const inputTensor = tf.tensor2d([get1Dboard(smallBoard)])
 
-    //Predict 10 times, get probability of each number that is not 0, put in an array only the top 2
-    let list = [];
-    for (let i = 0; i < 10; i++){
-        const prediction = brain.predict(inputTensor);
-        list.push(prediction.dataSync());
-    }
-    let sum = list.reduce((acc, val) => acc.map((v, i) => v + val[i]));
-    let top2 = [-1, -1];
-    let top2index = [-1, -1];
-    for (let i = 0; i < sum.length; i++){
-        if (sum[i] > top2[0]){
-            top2[1] = top2[0];
-            top2index[1] = top2index[0];
-            top2[0] = sum[i];
-            top2index[0] = i;
-        }else if (sum[i] > top2[1]){
-            top2[1] = sum[i];
-            top2index[1] = i;
-        }
+    const prediction = brain.predict(inputTensor);
+    const maxProbability = (prediction.max().dataSync()[0] * 100).toFixed(2);
+    const index = prediction.argMax(1).dataSync()[0];
+
+    let operator;
+
+    switch(index){
+        case 0:
+            operator = '+';
+            break;
+        case 1:
+            operator = '-';
+            break;
+        case 2:
+            operator = '.';
+            break;
+        case 3:
+            operator = '/';
+            break;
+        case 4:
+            operator = '÷';
+            break;
+        case 5:
+            operator = '(';
+            break;
+        case 6:
+            operator = ')';
+            break;
+        case 7:
+            operator = 'x';
+            break;
+        case 8:
+            operator = '√';
+            break;
+        case 9:
+            operator = 'Not An Operator';
+            break;
+
     }
 
 
-    document.getElementById('ai-guess').innerHTML = `Guess: ${top2index[0]}`;
-    if (top2index[1] > 0.01){
-        document.getElementById('ai-guess').innerHTML += ` or ${top2index[1].toString().length}`;
-    }
+    document.getElementById('ai-guess').innerHTML = `Guess: ${operator}`;
+    document.getElementById('ai-confidence').innerHTML = `Confidence: ${maxProbability}%`;
 
-    document.getElementById('ai-confidence').innerHTML = `Confidence: ${(top2[0]*10).toFixed(1)}%`;
-    if (top2index[1] > 0.01){
-        document.getElementById('ai-confidence').innerHTML += ` or ${(top2[1]*10).toFixed(top2index[1].toString().length)}%`;
-    }
 });
 
 function rotateBoardRandomly(board) {
@@ -154,16 +145,11 @@ function rotateBoardRandomly(board) {
         newBoard[pixel.y - minY][pixel.x - minX] = pixel.value;
     }
 
-    newBoard = resizeBoard(newBoard, 168, 240);
+    newBoard = resizeBoard(newBoard, 168, 168);
 
     return newBoard;
 }
 
-const correct = document.querySelectorAll('.correct');
-
-correct.forEach((button) => {
-    button.addEventListener('click', correctOption)
-})
 
 document.getElementById('saveai').addEventListener('click', async () => {
     try {
@@ -272,7 +258,7 @@ function getBoundingBox(board) {
         croppedBoard.push(row);
     }
 
-    return resizeBoard(croppedBoard, 168, 240);
+    return resizeBoard(croppedBoard, 168, 168);
 }
 
 function rotateBoundingBox(board, angle) {
@@ -379,7 +365,7 @@ async function learn(){
     
 
     document.getElementById('ai-guess').innerHTML = "Training is complete";
-    bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0));
+    bigBoard = new Array(28*6).fill(0).map(() => new Array(28*6).fill(0));
     batch = [];
 }
 
@@ -426,10 +412,10 @@ function correctOption(key){
     console.log(correctArray)
 
     batch.push([get1Dboard(smallBoard), correctArray])
-    batch.push([get1Dboard(resizeBoard(rotateBoardRandomly(smallBoard), 28,40)), correctArray])
+    batch.push([get1Dboard(resizeBoard(rotateBoardRandomly(smallBoard), 28,28)), correctArray])
   
 
-    bigBoard = new Array(40*6).fill(0).map(() => new Array(28*6).fill(0))
+    bigBoard = new Array(28*6).fill(0).map(() => new Array(28*6).fill(0))
 }
 
 
@@ -492,7 +478,7 @@ function interpolation (x0, y0, x1, y1){
 }
 
 function isInsideCanvas(x, y) {
-    return x >= 0 && x < 28*6 && y >= 0 && y < 40*6;
+    return x >= 0 && x < 28*6 && y >= 0 && y < 28*6;
 }
 
 bcanvas.addEventListener('mousedown', mousePressed);
@@ -521,7 +507,7 @@ function draw(x, y) {
 
     // update each pixel on the board
     for (let {x, y} of circle) {
-        if (x >= 0 && x < 28*6 && y >= 0 && y < 40*6) {
+        if (x >= 0 && x < 28*6 && y >= 0 && y < 28*6) {
             bigBoard[y][x] = current_brush_color;
         }
     }
@@ -531,7 +517,7 @@ function draw(x, y) {
 function mouseMoveHandler(event) {
     if (mouseIsPressed) {
         const [newX, newY] = [event.offsetX, event.offsetY];
-        if (newX >= 0 && newX < 28*6 && newY >= 0 && newY < 40*6) {
+        if (newX >= 0 && newX < 28*6 && newY >= 0 && newY < 28*6) {
             if (lastX !== -1 && lastY !== -1) {
                 interpolatePoints(lastX, lastY, newX, newY);
             }
@@ -579,7 +565,7 @@ function interpolatePoints(startX, startY, endX, endY) {
         const x = Math.round(startX + i * (endX - startX) / steps);
         const y = Math.round(startY + i * (endY - startY) / steps);
 
-        if (x >= 0 && x < 28*6 && y >= 0 && y < 40*6) {
+        if (x >= 0 && x < 28*6 && y >= 0 && y < 28*6) {
             points.push({x: x, y: y, value: current_brush_color});
            
         }
@@ -620,7 +606,7 @@ function stopDrawingLeaveCanvas(event) {
 
 
 function animate(){
-    [scanvas.width, scanvas.height, bcanvas.width, bcanvas.height] = [28, 40, 28*6, 40*6];
+    [scanvas.width, scanvas.height, bcanvas.width, bcanvas.height] = [28, 28, 28*6, 28*6];
     bctx.fillStyle = 'black';
     sctx.fillStyle = 'black';
 
