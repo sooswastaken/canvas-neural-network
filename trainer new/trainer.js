@@ -37,16 +37,19 @@ function setupBrain(){
         metrics: ['accuracy']
     });
 }
-
-(async () => {
-    brain = await tf.loadLayersModel('./network.json');
-    await brain.compile({
-        optimizer: tf.train.adam(),
-        loss: 'categoricalCrossentropy',
-        metrics: ['accuracy']
+fetch('./network.json')
+    .then(response => response.json())
+    .then(async data => {
+        brain = await tf.loadLayersModel('./network.json');
+        await brain.compile({
+            optimizer: tf.train.adam(),
+            loss: 'categoricalCrossentropy',
+            metrics: ['accuracy']
+        });
+    })
+    .catch(err => {
+        setupBrain();
     });
-    
-})()
 
 // brain = new Dann(1120, 10);
 // brain.addHiddenLayer(128, 'sigmoid');
