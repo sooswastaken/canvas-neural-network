@@ -14,6 +14,8 @@ let loaded = false;
 const WIDTH = 1000;
 const HEIGHT = 1000;
 
+let SHOW_EQUATION_BOUNDS = false;
+
 const cursor = new Image();
 cursor.src = './images/cursor.png';
 cursor.height = cursor.width * 2; 
@@ -35,6 +37,11 @@ document.getElementById('eraser-button').addEventListener('click', () => {
     current_brush_color = 0;
     pencil_old_size = current_brush_size;
     changeBrushSize(10);
+});
+
+
+document.getElementById('show-equation-bounds-button').addEventListener('click', () => {
+    SHOW_EQUATION_BOUNDS = !SHOW_EQUATION_BOUNDS;
 });
 
 document.getElementById('brush-size').addEventListener('change', (event) => {
@@ -384,7 +391,7 @@ function animate() {
         }
     }
 
-
+    if (SHOW_EQUATION_BOUNDS)
     findEquationsBounds(currentBoard).forEach(equation => {
         // continue if theres no equal sign
         // if(equation.hasEqualSign === false) return; // BEAIUTIFUL!!!

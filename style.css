@@ -27,6 +27,10 @@ body,
             cursor: pointer;
             margin-bottom: 15px;
         }
+
+        #show-equation-bounds-button {
+            color: white;
+        }
         
         label {
             display: block;
@@ -84,7 +88,7 @@ body,
             height: auto;
         }
 
-#trainModel{
+#trainModel {
     text-align: center;
     background-color: rgba(0, 0, 0, 0.5);
     color: white;

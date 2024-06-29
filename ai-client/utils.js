@@ -83,6 +83,12 @@ function findEquationsBounds(board) {
                 let overlap = Math.min(component1.right, component2.right) - Math.max(component1.left, component2.left);
                 if (overlap >= 15) {
                     equation.hasEqualSign = true;
+                    // if the equal sign is the last compoenent in the equation, add equalSignAtEnd: true
+                    if(j === values.length - 1) {
+                        equation.equalSignAtEnd = true
+                    }
+                    
+
                     // Combine the components
                     component1.top = Math.min(component1.top, component2.top);
                     component1.bottom = Math.max(component1.bottom, component2.bottom);
